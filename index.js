@@ -1,6 +1,10 @@
 import express from "express";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 import mongoose from "mongoose";
+import { validationResult } from "express-validator";
+import { registerValidation } from "./validations/auth.js";
+import UserModel from "./models/User.js";
 
 mongoose
   .connect(process.env.MONGO_DB_URI)
@@ -15,8 +19,26 @@ const app = express();
 
 app.use(express.json());
 
-app.get("/", (request, response) => {
-  response.send("Hello World!");
+app.post("/auth/register", registerValidation, async (request, response) => {
+  const errors = validationResult(request);
+  if (!errors.isEmpty()) {
+    return response.status(400).json(errors.array());
+  }
+
+  const password = request.body.password;
+  const salt = await bcrypt.genSalt(10);
+  const passwordHash = await bcrypt.hash(password, salt);
+
+  const doc = new UserModel({
+    email: request.body.email,
+    fullName: request.body.fullName,
+    avatarUrl: request.body.avatarUrl,
+    passwordHash,
+  });
+
+  const user = await doc.save();
+
+  response.json(user);
 });
 
 app.post("/auth/login", (request, response) => {
