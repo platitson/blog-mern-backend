@@ -63,16 +63,47 @@ app.post("/auth/register", registerValidation, async (request, response) => {
   }
 });
 
-app.post("/auth/login", (request, response) => {
-  const token = jwt.sign(
-    { email: request.body.email, fullName: "John Doe" },
-    "secret",
-    {
-      expiresIn: "1h",
-    }
-  );
+app.post("/auth/login", async (request, response) => {
+  try {
+    const user = await UserModel.findOne({ email: request.body.email });
 
-  response.json({ success: true, token });
+    if (!user) {
+      return response.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    const isValidPass = await bcrypt.compare(
+      request.body.password,
+      user._doc.passwordHash
+    );
+
+    if (!isValidPass) {
+      return response.status(400).json({
+        message: "Invalid login or password",
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        _id: user._id,
+      },
+      "secret",
+      {
+        expiresIn: "30d",
+      }
+    );
+
+    response.json({
+      ...user._doc,
+      token,
+    });
+  } catch (err) {
+    console.log(err);
+    response.status(500).json({
+      message: "Failed to authorize",
+    });
+  }
 });
 
 app.listen(4444, (err) => {
