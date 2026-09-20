@@ -20,25 +20,32 @@ const app = express();
 app.use(express.json());
 
 app.post("/auth/register", registerValidation, async (request, response) => {
-  const errors = validationResult(request);
-  if (!errors.isEmpty()) {
-    return response.status(400).json(errors.array());
+  try {
+    const errors = validationResult(request);
+    if (!errors.isEmpty()) {
+      return response.status(400).json(errors.array());
+    }
+
+    const password = request.body.password;
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    const doc = new UserModel({
+      email: request.body.email,
+      fullName: request.body.fullName,
+      avatarUrl: request.body.avatarUrl,
+      passwordHash,
+    });
+
+    const user = await doc.save();
+
+    response.json(user);
+  } catch (err) {
+    console.log(err);
+    response.status(500).json({
+      message: "Failed to register user",
+    });
   }
-
-  const password = request.body.password;
-  const salt = await bcrypt.genSalt(10);
-  const passwordHash = await bcrypt.hash(password, salt);
-
-  const doc = new UserModel({
-    email: request.body.email,
-    fullName: request.body.fullName,
-    avatarUrl: request.body.avatarUrl,
-    passwordHash,
-  });
-
-  const user = await doc.save();
-
-  response.json(user);
 });
 
 app.post("/auth/login", (request, response) => {
