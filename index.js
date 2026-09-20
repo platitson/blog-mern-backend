@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import { validationResult } from "express-validator";
 import { registerValidation } from "./validations/auth.js";
 import UserModel from "./models/User.js";
+import checkAuth from "./utils/checkAuth.js";
 
 mongoose
   .connect(process.env.MONGO_DB_URI)
@@ -94,14 +95,37 @@ app.post("/auth/login", async (request, response) => {
       }
     );
 
+    const { passwordHash, ...userData } = user._doc;
+
     response.json({
-      ...user._doc,
+      ...userData,
       token,
     });
   } catch (err) {
     console.log(err);
     response.status(500).json({
       message: "Failed to authorize",
+    });
+  }
+});
+
+app.get("/auth/me", checkAuth, async (request, response) => {
+  try {
+    const user = await UserModel.findById(request.userId);
+
+    if (!user) {
+      return response.status(404).json({
+        message: "No user found",
+      });
+    }
+
+    const { passwordHash, ...userData } = user._doc;
+
+    response.json(userData);
+  } catch (err) {
+    console.log(err);
+    response.status(500).json({
+      message: "Operation failed",
     });
   }
 });
