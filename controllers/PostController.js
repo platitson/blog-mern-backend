@@ -78,7 +78,7 @@ export const update = async (request, response) => {
         imageUrl: request.body.imageUrl,
         author: request.body.author,
       },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     response.json(doc);
