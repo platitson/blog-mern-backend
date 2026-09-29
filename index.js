@@ -7,6 +7,7 @@ import {
 } from "./validations/index.js";
 import checkAuth from "./utils/checkAuth.js";
 import { UserController, PostController } from "./controllers/index.js";
+import multer from "multer";
 
 mongoose
   .connect(process.env.MONGO_DB_URI)
@@ -19,7 +20,19 @@ mongoose
 
 const app = express();
 
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, "uploads");
+  },
+  filename: (_req, file, cb) => {
+    cb(null, file.originalname);
+  },
+});
+
+const upload = multer({ storage });
+
 app.use(express.json());
+app.use("/uploads", express.static("uploads"));
 
 app.post("/auth/register", registerValidation, UserController.register);
 app.post("/auth/login", loginValidation, UserController.login);
@@ -30,6 +43,12 @@ app.get("/posts/:id", PostController.getOne);
 app.post("/posts", checkAuth, postCreateValidation, PostController.create);
 app.delete("/posts/:id", checkAuth, PostController.remove);
 app.patch("/posts/:id", PostController.update);
+
+app.post("/upload", checkAuth, upload.single("image"), (request, response) => {
+  response.json({
+    url: `/uploads/${request.file.originalname}`,
+  });
+});
 
 app.listen(4444, (err) => {
   if (err) {
