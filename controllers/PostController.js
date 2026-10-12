@@ -26,7 +26,10 @@ export const getOne = async (request, response) => {
       { _id: postId },
       { $inc: { viewsCount: 1 } },
       { returnDocument: "after" }
-    );
+    ).populate({
+      path: "author",
+      select: ["fullName", "avatarUrl"],
+    });
 
     if (!doc) {
       return response.status(404).json({
